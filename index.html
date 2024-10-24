@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2048 Falling Block Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #fafafa;
+    }
+    #game-container {
+      position: relative;
+      width: 250px;
+      height: 500px;
+      border: 2px solid #000;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      background-color: #ccc;
+      gap: 2px;
+    }
+    .cell {
+      width: 100%;
+      height: 100%;
+      background-color: #e0e0e0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #333;
+    }
+    .block {
+      position: absolute;
+      width: 50px;
+      height: 100px;
+      background-color: #ffcc00;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2rem;
+      font-weight: bold;
+      color: #fff;
+      border: 2px solid #999;
+      transition: top 1s linear;
+    }
+  </style>
+</head>
+<body>
+
+<div id="game-container"></div>
+
+<script>
+  const gridSize = 5;
+  const gameContainer = document.getElementById('game-container');
+  let gameGrid = [];
+  let fallingBlock = null;
+  let blockQueue = [2];
+  let unlockedBlocks = [2];
+  let interval = null;
+  let isDragging = false;
+
+  // Initialize grid
+  function initGame() {
+    for (let i = 0; i < gridSize * gridSize; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      gameContainer.appendChild(cell);
+      gameGrid.push(null);
+    }
+
+    // Start with the first block (2)
+    spawnNewBlock();
+    interval = setInterval(moveBlockDown, 1000);
+  }
+
+  // Spawn new block at the top
+  function spawnNewBlock() {
+    const blockValue = blockQueue.shift() || 2;
+    fallingBlock = {
+      value: blockValue,
+      position: { row: 0, col: Math.floor(gridSize / 2) },
+      element: createBlockElement(blockValue)
+    };
+    gameContainer.appendChild(fallingBlock.element);
+    blockQueue.push(getRandomBlock());
+  }
+
+  // Create block HTML element
+  function createBlockElement(value) {
+    const block = document.createElement('div');
+    block.className = 'block';
+    block.textContent = value;
+    block.style.top = '0px';
+    block.style.left = `${fallingBlock.position.col * 50}px`;
+    return block;
+  }
+
+  // Move block down one row every second
+  function moveBlockDown() {
+    if (fallingBlock.position.row < gridSize - 1 && canMoveDown(fallingBlock)) {
+      fallingBlock.position.row++;
+      fallingBlock.element.style.top = `${fallingBlock.position.row * 100}px`;
+    } else {
+      placeBlock();
+      spawnNewBlock();
+    }
+  }
+
+  // Check if block can move down
+  function canMoveDown(block) {
+    const nextRow = block.position.row + 1;
+    return nextRow < gridSize && !gameGrid[nextRow * gridSize + block.position.col];
+  }
+
+  // Place block in the grid
+  function placeBlock() {
+    const index = fallingBlock.position.row * gridSize + fallingBlock.position.col;
+    gameGrid[index] = fallingBlock.value;
+    mergeBlocks(fallingBlock.position.row, fallingBlock.position.col);
+    fallingBlock.element.remove();
+    fallingBlock = null;
+
+    // Check if any columns exceed the height limit (6)
+    if (checkLoss()) {
+      alert('Game Over! Tower too tall.');
+      clearInterval(interval);
+    }
+  }
+
+  // Merge blocks if possible
+  function mergeBlocks(row, col) {
+    const index = row * gridSize + col;
+    if (row < gridSize - 1) {
+      const belowIndex = (row + 1) * gridSize + col;
+      if (gameGrid[belowIndex] && gameGrid[belowIndex] === gameGrid[index]) {
+        gameGrid[belowIndex] *= 2;
+        gameGrid[index] = null;
+        updateGridDisplay();
+        unlockBlock(gameGrid[belowIndex]);
+      }
+    }
+  }
+
+  // Update the grid display
+  function updateGridDisplay() {
+    const cells = document.querySelectorAll('.cell');
+    gameGrid.forEach((value, i) => {
+      cells[i].textContent = value ? value : '';
+    });
+  }
+
+  // Check if the player lost by exceeding 6 blocks
+  function checkLoss() {
+    for (let col = 0; col < gridSize; col++) {
+      let stackHeight = 0;
+      for (let row = 0; row < gridSize; row++) {
+        if (gameGrid[row * gridSize + col]) stackHeight++;
+      }
+      if (stackHeight >= 6) return true;
+    }
+    return false;
+  }
+
+  // Unlock higher block values for the queue
+  function unlockBlock(value) {
+    if (!unlockedBlocks.includes(value) && value >= 4) {
+      unlockedBlocks.push(value);
+      blockQueue.push(value);
+    }
+  }
+
+  // Get random block from unlocked list
+  function getRandomBlock() {
+    return unlockedBlocks[Math.floor(Math.random() * unlockedBlocks.length)];
+  }
+
+  // Move block by tapping or dragging
+  gameContainer.addEventListener('mousedown', () => {
+    isDragging = true;
+  });
+  gameContainer.addEventListener('mousemove', (event) => {
+    if (isDragging && fallingBlock) {
+      const col = Math.floor(event.offsetX / 50);
+      if (col >= 0 && col < gridSize) {
+        fallingBlock.position.col = col;
+        fallingBlock.element.style.left = `${col * 50}px`;
+      }
+    }
+  });
+  gameContainer.addEventListener('mouseup', () => {
+    isDragging = false;
+  });
+  gameContainer.addEventListener('click', (event) => {
+    if (fallingBlock) {
+      const col = Math.floor(event.offsetX / 50);
+      if (col >= 0 && col < gridSize) {
+        fallingBlock.position.col = col;
+        fallingBlock.element.style.left = `${col * 50}px`;
+      }
+    }
+  });
+
+  // Start the game
+  initGame();
+</script>
+
+</body>
+</html>
