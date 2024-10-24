@@ -198,8 +198,7 @@
     const block = document.createElement('div');
     block.className = 'block';
     block.textContent = value;
-    block.style.top = '0px';
-    block.style.left = '0px';
+    block.style.backgroundColor = '#ffcc00'; // Make the block visible
     return block;
   }
 
@@ -231,6 +230,18 @@
     const nextRow = block.position.row + 1;
     return nextRow < gridSize && !gameGrid[nextRow * gridSize + block.position.col];
   }
+
+  // Move block to selected column on click
+  gameContainer.addEventListener('click', (event) => {
+    if (fallingBlock) {
+      const col = Math.floor(event.offsetX / 50); // Calculate which column was clicked
+      if (col >= 0 && col < gridSize) {
+        fallingBlock.position.col = col; // Move the falling block to the clicked column
+        updateBlockPosition(fallingBlock); // Update block position in the DOM
+        log(`Block moved to column: ${col}`);
+      }
+    }
+  });
 
   // Place block in the grid
   function placeBlock() {
