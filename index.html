@@ -200,13 +200,15 @@
   // Move block down one row every second
   function moveBlockDown() {
     try {
-      if (fallingBlock && fallingBlock.position.row < gridSize - 1 && canMoveDown(fallingBlock)) {
-        fallingBlock.position.row++;
-        fallingBlock.element.style.top = `${fallingBlock.position.row * 50}px`;
-        log(`Block moved down to row: ${fallingBlock.position.row}`);
-      } else if (fallingBlock) {
-        placeBlock();
-        spawnNewBlock();
+      if (fallingBlock && fallingBlock.position) {
+        if (fallingBlock.position.row < gridSize - 1 && canMoveDown(fallingBlock)) {
+          fallingBlock.position.row++;
+          fallingBlock.element.style.top = `${fallingBlock.position.row * 50}px`;
+          log(`Block moved down to row: ${fallingBlock.position.row}`);
+        } else {
+          placeBlock();
+          spawnNewBlock();
+        }
       }
     } catch (error) {
       logError(error);
@@ -222,6 +224,7 @@
   // Place block in the grid
   function placeBlock() {
     try {
+      if (!fallingBlock) return;
       const index = fallingBlock.position.row * gridSize + fallingBlock.position.col;
       gameGrid[index] = fallingBlock.value;
       mergeBlocks(fallingBlock.position.row, fallingBlock.position.col);
