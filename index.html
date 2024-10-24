@@ -159,8 +159,8 @@
       score = 0;
       scoreElement.textContent = 'Score: 0';
       fallingBlock = null;
-      spawnNewBlock();
-      interval = setInterval(moveBlockDown, 1000);
+      spawnNewBlock(); // Spawn the first block
+      interval = setInterval(moveBlockDown, 1000); // Start the block movement loop
       log("Game initialized");
     } catch (error) {
       logError(error);
@@ -174,15 +174,18 @@
   // Spawn new block at the top
   function spawnNewBlock() {
     try {
-      if (fallingBlock === null) {
-        const blockValue = blockQueue.shift() || 2;
+      if (!fallingBlock) {
+        const blockValue = blockQueue.shift() || 2; // Get the next block value
+        blockQueue.push(getRandomBlock()); // Add a random block to the queue
+
         fallingBlock = {
           value: blockValue,
-          position: { row: 0, col: Math.floor(gridSize / 2) },
+          position: { row: 0, col: Math.floor(gridSize / 2) }, // Start at the top, middle column
           element: createBlockElement(blockValue)
         };
-        gameContainer.appendChild(fallingBlock.element);
-        blockQueue.push(getRandomBlock());
+
+        gameContainer.appendChild(fallingBlock.element); // Add the block to the DOM
+        updateBlockPosition(fallingBlock); // Place the block at the initial position
         log(`New block spawned: ${blockValue}`);
       }
     } catch (error) {
@@ -196,8 +199,14 @@
     block.className = 'block';
     block.textContent = value;
     block.style.top = '0px';
-    block.style.left = `${fallingBlock.position.col * 50}px`;
+    block.style.left = '0px';
     return block;
+  }
+
+  // Update block position on the grid
+  function updateBlockPosition(block) {
+    block.element.style.top = `${block.position.row * 50}px`;
+    block.element.style.left = `${block.position.col * 50}px`;
   }
 
   // Move block down one row every second
@@ -205,11 +214,11 @@
     try {
       if (fallingBlock && fallingBlock.position && canMoveDown(fallingBlock)) {
         fallingBlock.position.row++;
-        fallingBlock.element.style.top = `${fallingBlock.position.row * 50}px`;
+        updateBlockPosition(fallingBlock); // Update block position in the DOM
         log(`Block moved down to row: ${fallingBlock.position.row}`);
       } else if (fallingBlock) {
-        placeBlock();
-        spawnNewBlock();
+        placeBlock(); // Place block when it can't move down
+        spawnNewBlock(); // Spawn the next block
       }
     } catch (error) {
       logError(error);
@@ -233,6 +242,7 @@
       fallingBlock.element.remove();
       fallingBlock = null;
       log("Block placed");
+
       // Check if any columns exceed the height limit (6)
       if (checkLoss()) {
         log("Game Over: Tower too tall");
@@ -266,7 +276,7 @@
     }
   }
 
-  // Update the grid display
+  // Update the grid display after merging blocks
   function updateGridDisplay() {
     const cells = document.querySelectorAll('.cell');
     gameGrid.forEach((value, i) => {
