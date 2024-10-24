@@ -8,38 +8,40 @@
     body {
       font-family: Arial, sans-serif;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       height: 100vh;
       margin: 0;
-      background-color: #fafafa;
+      background-color: #333;
+      color: #fff;
     }
     #game-container {
       position: relative;
       width: 250px;
-      height: 500px;
+      height: 250px;
       border: 2px solid #000;
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       grid-template-rows: repeat(5, 1fr);
-      background-color: #ccc;
+      background-color: #444;
       gap: 2px;
     }
     .cell {
       width: 100%;
       height: 100%;
-      background-color: #e0e0e0;
+      background-color: #555;
       display: flex;
       justify-content: center;
       align-items: center;
       font-size: 1.5rem;
       font-weight: bold;
-      color: #333;
+      color: #eee;
     }
     .block {
       position: absolute;
       width: 50px;
-      height: 100px;
+      height: 50px;
       background-color: #ffcc00;
       display: flex;
       justify-content: center;
@@ -48,34 +50,66 @@
       font-weight: bold;
       color: #fff;
       border: 2px solid #999;
-      transition: top 1s linear;
+      transition: top 1s linear, left 0.2s;
+    }
+    #controls {
+      margin: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 1rem;
+      background-color: #666;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    button:hover {
+      background-color: #777;
+    }
+    #score {
+      margin-top: 10px;
+      font-size: 1.2rem;
     }
   </style>
 </head>
 <body>
+
+<div id="controls">
+  <button id="start-btn">Start</button>
+  <button id="restart-btn" style="display: none;">Restart</button>
+  <div id="score">Score: 0</div>
+</div>
 
 <div id="game-container"></div>
 
 <script>
   const gridSize = 5;
   const gameContainer = document.getElementById('game-container');
+  const startButton = document.getElementById('start-btn');
+  const restartButton = document.getElementById('restart-btn');
+  const scoreElement = document.getElementById('score');
   let gameGrid = [];
   let fallingBlock = null;
   let blockQueue = [2];
   let unlockedBlocks = [2];
   let interval = null;
   let isDragging = false;
+  let score = 0;
 
-  // Initialize grid
+  // Initialize the grid and game settings
   function initGame() {
+    gameContainer.innerHTML = ''; // Clear any existing content
+    gameGrid = [];
     for (let i = 0; i < gridSize * gridSize; i++) {
       const cell = document.createElement('div');
       cell.className = 'cell';
       gameContainer.appendChild(cell);
       gameGrid.push(null);
     }
-
-    // Start with the first block (2)
+    score = 0;
+    scoreElement.textContent = 'Score: 0';
     spawnNewBlock();
     interval = setInterval(moveBlockDown, 1000);
   }
@@ -104,10 +138,10 @@
 
   // Move block down one row every second
   function moveBlockDown() {
-    if (fallingBlock.position.row < gridSize - 1 && canMoveDown(fallingBlock)) {
+    if (fallingBlock && fallingBlock.position.row < gridSize - 1 && canMoveDown(fallingBlock)) {
       fallingBlock.position.row++;
-      fallingBlock.element.style.top = `${fallingBlock.position.row * 100}px`;
-    } else {
+      fallingBlock.element.style.top = `${fallingBlock.position.row * 50}px`;
+    } else if (fallingBlock) {
       placeBlock();
       spawnNewBlock();
     }
@@ -131,16 +165,19 @@
     if (checkLoss()) {
       alert('Game Over! Tower too tall.');
       clearInterval(interval);
+      restartButton.style.display = 'block';
     }
   }
 
-  // Merge blocks if possible
+  // Merge blocks if possible and update score
   function mergeBlocks(row, col) {
     const index = row * gridSize + col;
     if (row < gridSize - 1) {
       const belowIndex = (row + 1) * gridSize + col;
       if (gameGrid[belowIndex] && gameGrid[belowIndex] === gameGrid[index]) {
         gameGrid[belowIndex] *= 2;
+        score += gameGrid[belowIndex]; // Add to score
+        scoreElement.textContent = 'Score: ' + score;
         gameGrid[index] = null;
         updateGridDisplay();
         unlockBlock(gameGrid[belowIndex]);
@@ -207,8 +244,19 @@
     }
   });
 
-  // Start the game
-  initGame();
+  // Start button functionality
+  startButton.addEventListener('click', () => {
+    startButton.style.display = 'none';
+    restartButton.style.display = 'block';
+    initGame();
+  });
+
+  // Restart button functionality
+  restartButton.addEventListener('click', () => {
+    clearInterval(interval);
+    initGame();
+  });
+
 </script>
 
 </body>
