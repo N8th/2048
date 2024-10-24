@@ -72,6 +72,30 @@
       margin-top: 10px;
       font-size: 1.2rem;
     }
+    #log-box {
+      width: 250px;
+      height: 150px;
+      background-color: #222;
+      color: #fff;
+      overflow-y: auto;
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #444;
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    #copy-btn {
+      margin-top: 5px;
+      padding: 5px 10px;
+      background-color: #666;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    #copy-btn:hover {
+      background-color: #777;
+    }
   </style>
 </head>
 <body>
@@ -84,12 +108,17 @@
 
 <div id="game-container"></div>
 
+<div id="log-box">Log Output:</div>
+<button id="copy-btn">Copy Log</button>
+
 <script>
   const gridSize = 5;
   const gameContainer = document.getElementById('game-container');
   const startButton = document.getElementById('start-btn');
   const restartButton = document.getElementById('restart-btn');
   const scoreElement = document.getElementById('score');
+  const logBox = document.getElementById('log-box');
+  const copyButton = document.getElementById('copy-btn');
   let gameGrid = [];
   let fallingBlock = null;
   let blockQueue = [2];
@@ -98,32 +127,64 @@
   let isDragging = false;
   let score = 0;
 
+  function log(message) {
+    logBox.innerHTML += message + "<br>";
+    logBox.scrollTop = logBox.scrollHeight;
+    console.log(message);
+  }
+
+  function copyLog() {
+    const textarea = document.createElement('textarea');
+    textarea.value = logBox.innerText;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    alert("Log copied to clipboard!");
+  }
+
+  copyButton.addEventListener('click', copyLog);
+
   // Initialize the grid and game settings
   function initGame() {
-    gameContainer.innerHTML = ''; // Clear any existing content
-    gameGrid = [];
-    for (let i = 0; i < gridSize * gridSize; i++) {
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      gameContainer.appendChild(cell);
-      gameGrid.push(null);
+    try {
+      gameContainer.innerHTML = ''; // Clear any existing content
+      gameGrid = [];
+      for (let i = 0; i < gridSize * gridSize; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        gameContainer.appendChild(cell);
+        gameGrid.push(null);
+      }
+      score = 0;
+      scoreElement.textContent = 'Score: 0';
+      spawnNewBlock();
+      interval = setInterval(moveBlockDown, 1000);
+      log("Game initialized");
+    } catch (error) {
+      logError(error);
     }
-    score = 0;
-    scoreElement.textContent = 'Score: 0';
-    spawnNewBlock();
-    interval = setInterval(moveBlockDown, 1000);
+  }
+
+  function logError(error) {
+    log(`Error: ${error.message}`);
   }
 
   // Spawn new block at the top
   function spawnNewBlock() {
-    const blockValue = blockQueue.shift() || 2;
-    fallingBlock = {
-      value: blockValue,
-      position: { row: 0, col: Math.floor(gridSize / 2) },
-      element: createBlockElement(blockValue)
-    };
-    gameContainer.appendChild(fallingBlock.element);
-    blockQueue.push(getRandomBlock());
+    try {
+      const blockValue = blockQueue.shift() || 2;
+      fallingBlock = {
+        value: blockValue,
+        position: { row: 0, col: Math.floor(gridSize / 2) },
+        element: createBlockElement(blockValue)
+      };
+      gameContainer.appendChild(fallingBlock.element);
+      blockQueue.push(getRandomBlock());
+      log(`New block spawned: ${blockValue}`);
+    } catch (error) {
+      logError(error);
+    }
   }
 
   // Create block HTML element
@@ -138,12 +199,17 @@
 
   // Move block down one row every second
   function moveBlockDown() {
-    if (fallingBlock && fallingBlock.position.row < gridSize - 1 && canMoveDown(fallingBlock)) {
-      fallingBlock.position.row++;
-      fallingBlock.element.style.top = `${fallingBlock.position.row * 50}px`;
-    } else if (fallingBlock) {
-      placeBlock();
-      spawnNewBlock();
+    try {
+      if (fallingBlock && fallingBlock.position.row < gridSize - 1 && canMoveDown(fallingBlock)) {
+        fallingBlock.position.row++;
+        fallingBlock.element.style.top = `${fallingBlock.position.row * 50}px`;
+        log(`Block moved down to row: ${fallingBlock.position.row}`);
+      } else if (fallingBlock) {
+        placeBlock();
+        spawnNewBlock();
+      }
+    } catch (error) {
+      logError(error);
     }
   }
 
@@ -155,33 +221,43 @@
 
   // Place block in the grid
   function placeBlock() {
-    const index = fallingBlock.position.row * gridSize + fallingBlock.position.col;
-    gameGrid[index] = fallingBlock.value;
-    mergeBlocks(fallingBlock.position.row, fallingBlock.position.col);
-    fallingBlock.element.remove();
-    fallingBlock = null;
-
-    // Check if any columns exceed the height limit (6)
-    if (checkLoss()) {
-      alert('Game Over! Tower too tall.');
-      clearInterval(interval);
-      restartButton.style.display = 'block';
+    try {
+      const index = fallingBlock.position.row * gridSize + fallingBlock.position.col;
+      gameGrid[index] = fallingBlock.value;
+      mergeBlocks(fallingBlock.position.row, fallingBlock.position.col);
+      fallingBlock.element.remove();
+      fallingBlock = null;
+      log("Block placed");
+      // Check if any columns exceed the height limit (6)
+      if (checkLoss()) {
+        log("Game Over: Tower too tall");
+        alert('Game Over! Tower too tall.');
+        clearInterval(interval);
+        restartButton.style.display = 'block';
+      }
+    } catch (error) {
+      logError(error);
     }
   }
 
   // Merge blocks if possible and update score
   function mergeBlocks(row, col) {
-    const index = row * gridSize + col;
-    if (row < gridSize - 1) {
-      const belowIndex = (row + 1) * gridSize + col;
-      if (gameGrid[belowIndex] && gameGrid[belowIndex] === gameGrid[index]) {
-        gameGrid[belowIndex] *= 2;
-        score += gameGrid[belowIndex]; // Add to score
-        scoreElement.textContent = 'Score: ' + score;
-        gameGrid[index] = null;
-        updateGridDisplay();
-        unlockBlock(gameGrid[belowIndex]);
+    try {
+      const index = row * gridSize + col;
+      if (row < gridSize - 1) {
+        const belowIndex = (row + 1) * gridSize + col;
+        if (gameGrid[belowIndex] && gameGrid[belowIndex] === gameGrid[index]) {
+          gameGrid[belowIndex] *= 2;
+          score += gameGrid[belowIndex]; // Add to score
+          scoreElement.textContent = 'Score: ' + score;
+          gameGrid[index] = null;
+          updateGridDisplay();
+          unlockBlock(gameGrid[belowIndex]);
+          log(`Blocks merged: New value ${gameGrid[belowIndex]}`);
+        }
       }
+    } catch (error) {
+      logError(error);
     }
   }
 
@@ -210,6 +286,7 @@
     if (!unlockedBlocks.includes(value) && value >= 4) {
       unlockedBlocks.push(value);
       blockQueue.push(value);
+      log(`Block value unlocked: ${value}`);
     }
   }
 
@@ -217,32 +294,6 @@
   function getRandomBlock() {
     return unlockedBlocks[Math.floor(Math.random() * unlockedBlocks.length)];
   }
-
-  // Move block by tapping or dragging
-  gameContainer.addEventListener('mousedown', () => {
-    isDragging = true;
-  });
-  gameContainer.addEventListener('mousemove', (event) => {
-    if (isDragging && fallingBlock) {
-      const col = Math.floor(event.offsetX / 50);
-      if (col >= 0 && col < gridSize) {
-        fallingBlock.position.col = col;
-        fallingBlock.element.style.left = `${col * 50}px`;
-      }
-    }
-  });
-  gameContainer.addEventListener('mouseup', () => {
-    isDragging = false;
-  });
-  gameContainer.addEventListener('click', (event) => {
-    if (fallingBlock) {
-      const col = Math.floor(event.offsetX / 50);
-      if (col >= 0 && col < gridSize) {
-        fallingBlock.position.col = col;
-        fallingBlock.element.style.left = `${col * 50}px`;
-      }
-    }
-  });
 
   // Start button functionality
   startButton.addEventListener('click', () => {
